@@ -77,12 +77,25 @@ def cell_is_int_greater_than_0(cell_value):
     return isinstance(cell_value, int) and cell_value > 0
 
 
-def read_cells(grid):
+def read_cells(grid, read_all_cells=False):
     for y in range(0, len(grid)):
         for x in range(0, len(grid[y])):
             if get_grid_cell(x, y, grid) == UNCLICKED:
-                set_grid_cell(x, y, grid, read_cell([x, y]))
+                if not read_all_cells:
+                    adj_flagged_adj_count, adj_unclicked_adjacents, adj_numbered_adjacents \
+                        = get_unclicked_adj_and_flagged_adj_count(grid, x, y)
+                    if len(adj_numbered_adjacents) > 0:
+                        set_grid_cell(x, y, grid, read_cell([x, y]))
+                else:
+                    set_grid_cell(x, y, grid, read_cell([x, y]))
     return grid
+
+
+def read_cell_and_adj_cells(cell: Tuple[int, int], grid):
+    adj_spot_list = get_adj_cells(cell[0], cell[1], grid)
+    set_grid_cell(cell[0], cell[1], grid, read_cell(cell))
+    for spot in adj_spot_list:
+        set_grid_cell(spot[0], spot[1], grid, read_cell(spot))
 
 
 def is_game_over(grid):
@@ -168,26 +181,32 @@ def click_if_flags_are_greater_than_spot_num(x, y, grid):
     else:
         return False
 
-
-def get_unclicked_adj_and_flagged_adj_count(grid, x, y):
-    flagged_adj_count = 0
-    unclicked_adjacents = []
-    numbered_adjacents = []
-    adj_spots = [
+def get_adj_cells(x, y, grid):
+    adj_spot_list = []
+    adj_spots_vectors = [
         (-1, -1), (0, -1), (1, -1),
         (-1, 0), (1, 0),
         (-1, 1), (0, 1), (1, 1)
     ]
     if x == 0:
-        remove_many_agnostic_to_existance(adj_spots, [(-1, -1), (-1, 0), (-1, 1)])
+        remove_many_agnostic_to_existance(adj_spots_vectors, [(-1, -1), (-1, 0), (-1, 1)])
     if x == len(grid[0]) - 1:
-        remove_many_agnostic_to_existance(adj_spots, [(1, -1), (1, 0), (1, 1)])
+        remove_many_agnostic_to_existance(adj_spots_vectors, [(1, -1), (1, 0), (1, 1)])
     if y == 0:
-        remove_many_agnostic_to_existance(adj_spots, [(-1, -1), (0, -1), (1, -1)])
+        remove_many_agnostic_to_existance(adj_spots_vectors, [(-1, -1), (0, -1), (1, -1)])
     if y == len(grid) - 1:
-        remove_many_agnostic_to_existance(adj_spots, [(-1, 1), (0, 1), (1, 1)])
-    for spot in adj_spots:
+        remove_many_agnostic_to_existance(adj_spots_vectors, [(-1, 1), (0, 1), (1, 1)])
+    for spot in adj_spots_vectors:
         spot_to_check = [x + spot[0], y + spot[1]]
+        adj_spot_list.append(spot_to_check)
+    return adj_spot_list
+
+def get_unclicked_adj_and_flagged_adj_count(grid, x, y):
+    flagged_adj_count = 0
+    unclicked_adjacents = []
+    numbered_adjacents = []
+    adj_spot_list = get_adj_cells(x, y, grid)
+    for spot_to_check in adj_spot_list:
         grid_content_at_spot_to_check = get_grid_cell(spot_to_check[0], spot_to_check[1], grid)
         if grid_content_at_spot_to_check == FLAGGED:
             flagged_adj_count = flagged_adj_count + 1
@@ -230,10 +249,11 @@ def guess(grid: List[List[Any]]):
             guess_obj.bomb_probability = max(numbered_adjacents_ps)
         else:
             guess_obj.bomb_probability = bombs_left / len(guess_list)
-    print("Guess List: " + json.dumps(guess_list, default=json_default, sort_keys=True, indent=4))
+    #print("Guess List: " + json.dumps(guess_list, default=json_default, sort_keys=True, indent=4))
     min_guess = min(guess_list, key=attrgetter('bomb_probability'))
     print("Making a guess click on: " + json.dumps(min_guess, default=json_default, sort_keys=True, indent=4))
     left_click_cell(min_guess.cell)
+    read_cell_and_adj_cells(min_guess.cell, grid)
     return True
 
 
@@ -270,12 +290,14 @@ def cycle_through_number_cells(grid):
 
 def play_new_game(autoplay):
     if not autoplay:
-        input("Press enter to continue...")
+        continue_yes = 'n'
+        while continue_yes.upper() != 'Y':
+            continue_yes = input("Press 'y' + enter to continue...")
 
 
 def open_minesweeper_webpage():
     while True:
-        size_input = input("Want to play a small, medium, or large game? (s, m, l): ")
+        size_input = input("Want to play a small, medium, large, or custom game? (s, m, l, c): ")
         if size_input.upper() == "L":
             url = large_url
             size = large_size
@@ -288,6 +310,13 @@ def open_minesweeper_webpage():
             url = small_url
             size = small_size
             break
+        elif size_input.upper() == "C":
+            url = large_url
+            custom_size_input_x = int(input("Please enter the board width: "))
+            custom_size_input_y = input("Please enter the board height: ")
+            custom_size_input_bombs = input("Please enter the number of mines: ")
+            size = (int(custom_size_input_x) - 1, int(custom_size_input_y) - 1)
+            break
         else:
             print("Sorry, please input s, m, or l")
     co_op = input("Co-Op? y/n: ")
@@ -296,6 +325,14 @@ def open_minesweeper_webpage():
     else:
         autoplay = True
     browser.visit(url)
+    if size_input.upper() == "C":
+        browser.find_by_id("options-link").first.click()
+        browser.find_by_id("custom").first.click()
+        browser.find_by_id("custom_height").fill(str(custom_size_input_y))
+        browser.find_by_id("custom_width").fill(str(custom_size_input_x))
+        browser.find_by_id("custom_mines").fill(str(custom_size_input_bombs))
+        time.sleep(2)
+        browser.find_by_value("New Game").first.click()
     while True:
         try:
             browser.find_by_id("face").first.click()
@@ -306,10 +343,14 @@ def open_minesweeper_webpage():
             game_over = False
             grid = [[UNCLICKED] * (size[0] + 1) for _ in range((size[1] + 1))]
             print("Instantiated grid of size: " + str((len(grid[0]), len(grid))))
+            read_cell_and_adj_cells(starting_click, grid)
+            read_all_cells = False
             while not game_over:
-                grid = read_cells(grid)
+                grid = read_cells(grid, read_all_cells=read_all_cells)
+                read_all_cells = False
                 if not cycle_through_number_cells(grid):
                     guess(grid)
+                    #read_all_cells = True
                 if browser.find_by_id("face")["class"] == "facewin":
                     print("Game won")
                     game_over = True
