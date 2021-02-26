@@ -1,7 +1,12 @@
 import random
 from splinter import Browser
 import time
+import json
 from selenium.webdriver.remote.errorhandler import UnexpectedAlertPresentException
+from typing import List, Any, Tuple
+from operator import attrgetter
+from datetime import datetime
+
 
 UNCLICKED = "UNCLICKED"
 FLAGGED = "FLAGGED"
@@ -25,6 +30,13 @@ cell_class_dict = {
 
 browser = Browser('firefox')
 
+
+def json_default(value):
+    if isinstance(value, datetime):
+        time_str = str(value.hour) + ":" + str(value.minute) + ":" + str(value.second)
+        return dict(time=time_str)
+    else:
+        return dict(value.__dict__)
 
 def grid_print(grid):
     n = 0
@@ -87,10 +99,14 @@ def remove_many_agnostic_to_existance(a_list: list, values: list):
             a_list.remove(value)
 
 
-def click_if_flags_are_greater_than_spot_num(x, y, grid, size):
+def click_if_flags_are_greater_than_spot_num(x, y, grid):
     spot_number = get_grid_cell(x, y, grid)
     flagged_adj_count, unclicked_adjacents, numbered_adjacents \
-        = get_unclicked_adj_and_flagged_adj_count(grid, size, x, y)
+        = get_unclicked_adj_and_flagged_adj_count(grid, x, y)
+    if len(unclicked_adjacents) == 0:
+        print("Marking cell complete without an action")
+        set_grid_cell(x, y, grid, COMPLETED)
+        return True
     if int(spot_number) > flagged_adj_count and int(spot_number) == len(unclicked_adjacents) + flagged_adj_count:
         print("Right clicking unclicked adjacents of cell: {x}, {y}".format(**{"x": x, "y": y}))
         for cell in unclicked_adjacents:
@@ -107,7 +123,7 @@ def click_if_flags_are_greater_than_spot_num(x, y, grid, size):
         print("numbered_adjacents: " + str(numbered_adjacents))
         for numbered_adj_cell in numbered_adjacents:
             adj_flagged_adj_count, adj_unclicked_adjacents, adj_numbered_adjacents \
-                = get_unclicked_adj_and_flagged_adj_count(grid, size, numbered_adj_cell[0], numbered_adj_cell[1])
+                = get_unclicked_adj_and_flagged_adj_count(grid, numbered_adj_cell[0], numbered_adj_cell[1])
             if 1 == get_grid_cell(numbered_adj_cell[0], numbered_adj_cell[1], grid) - adj_flagged_adj_count:
                 print("checking for numbered_adj_cell: " + str(numbered_adj_cell))
                 if len(adj_unclicked_adjacents) == 3:
@@ -153,7 +169,7 @@ def click_if_flags_are_greater_than_spot_num(x, y, grid, size):
         return False
 
 
-def get_unclicked_adj_and_flagged_adj_count(grid, size, x, y):
+def get_unclicked_adj_and_flagged_adj_count(grid, x, y):
     flagged_adj_count = 0
     unclicked_adjacents = []
     numbered_adjacents = []
@@ -164,11 +180,11 @@ def get_unclicked_adj_and_flagged_adj_count(grid, size, x, y):
     ]
     if x == 0:
         remove_many_agnostic_to_existance(adj_spots, [(-1, -1), (-1, 0), (-1, 1)])
-    if x == size[0]:
+    if x == len(grid[0]) - 1:
         remove_many_agnostic_to_existance(adj_spots, [(1, -1), (1, 0), (1, 1)])
     if y == 0:
         remove_many_agnostic_to_existance(adj_spots, [(-1, -1), (0, -1), (1, -1)])
-    if y == size[1]:
+    if y == len(grid) - 1:
         remove_many_agnostic_to_existance(adj_spots, [(-1, 1), (0, 1), (1, 1)])
     for spot in adj_spots:
         spot_to_check = [x + spot[0], y + spot[1]]
@@ -183,7 +199,49 @@ def get_unclicked_adj_and_flagged_adj_count(grid, size, x, y):
     return flagged_adj_count, unclicked_adjacents, numbered_adjacents
 
 
-def get_grid_cell(x, y, grid):
+class GuessObj(object):
+    def __init__(self, x: int, y: int):
+        self.cell = (x, y)
+    cell: Tuple[int, int]
+    bomb_probability: float
+
+    
+def guess(grid: List[List[Any]]):
+    bombs_left = read_bombs_counter("mines_hundreds", 100) + read_bombs_counter("mines_tens", 10) + read_bombs_counter("mines_ones", 1)
+    guess_list: List[GuessObj] = []
+    for y in range(0, len(grid)):
+        for x in range(0, len(grid[y])):
+            if get_grid_cell(x, y, grid) == UNCLICKED:
+                guess_list.append(GuessObj(x, y))
+
+    for guess_obj in guess_list:
+        x = guess_obj.cell[0]
+        y = guess_obj.cell[1]
+        flagged_adj_count, unclicked_adjacents, numbered_adjacents = \
+            get_unclicked_adj_and_flagged_adj_count(grid, x, y)
+        if len(numbered_adjacents) > 0:
+            numbered_adjacents_ps = []
+            for num_adj in numbered_adjacents:
+                num_adj_flagged_adj_count, num_adj_unclicked_adjacents, num_adj_numbered_adjacents = \
+                    get_unclicked_adj_and_flagged_adj_count(grid, num_adj[0], num_adj[1])
+                adj_p = (int(get_grid_cell(num_adj[0], num_adj[1], grid)) - num_adj_flagged_adj_count) \
+                        / len(num_adj_unclicked_adjacents)
+                numbered_adjacents_ps.append(adj_p)
+            guess_obj.bomb_probability = max(numbered_adjacents_ps)
+        else:
+            guess_obj.bomb_probability = bombs_left / len(guess_list)
+    print("Guess List: " + json.dumps(guess_list, default=json_default, sort_keys=True, indent=4))
+    min_guess = min(guess_list, key=attrgetter('bomb_probability'))
+    print("Making a guess click on: " + json.dumps(min_guess, default=json_default, sort_keys=True, indent=4))
+    left_click_cell(min_guess.cell)
+    return True
+
+
+def read_bombs_counter(div_id: str, multiplier: int):
+    return int(browser.find_by_id(div_id)["class"][-1]) * multiplier
+
+
+def get_grid_cell(x: int, y: int, grid: List[List[Any]]):
     try:
         return grid[y][x]
     except IndexError as e:
@@ -199,11 +257,11 @@ def set_grid_cell(x, y, grid, new_value):
         raise e
 
 
-def cycle_through_number_cells(grid, size):
+def cycle_through_number_cells(grid):
     for y in range(0, len(grid)):
         for x in range(0, len(grid[0])):
             if cell_is_int_greater_than_0(get_grid_cell(x, y, grid)):
-                if click_if_flags_are_greater_than_spot_num(x, y, grid, size):
+                if click_if_flags_are_greater_than_spot_num(x, y, grid):
                     return True
     print("Cycled through every cell without making a move")
     #time.sleep(1)
@@ -234,15 +292,9 @@ def open_minesweeper_webpage():
             print("Sorry, please input s, m, or l")
     co_op = input("Co-Op? y/n: ")
     if co_op.upper() == "Y":
-        co_op = True
         autoplay = False
     else:
-        co_op = False
-        autoplay = input("Autoplay? y/n: ")
-        if autoplay.upper() == "Y":
-            autoplay = True
-        else:
-            autoplay = False
+        autoplay = True
     browser.visit(url)
     while True:
         try:
@@ -253,11 +305,12 @@ def open_minesweeper_webpage():
             print("starting bot while loop")
             game_over = False
             grid = [[UNCLICKED] * (size[0] + 1) for _ in range((size[1] + 1))]
+            print("Instantiated grid of size: " + str((len(grid[0]), len(grid))))
             while not game_over:
                 grid = read_cells(grid)
-                if not cycle_through_number_cells(grid, size) and not co_op:
-                    game_over = True
-                elif browser.find_by_id("face")["class"] == "facewin":
+                if not cycle_through_number_cells(grid):
+                    guess(grid)
+                if browser.find_by_id("face")["class"] == "facewin":
                     print("Game won")
                     game_over = True
                 else:
@@ -266,7 +319,6 @@ def open_minesweeper_webpage():
         except UnexpectedAlertPresentException as e:
             print("Score alert pop up found")
             play_new_game(autoplay)
-
 
 
 if __name__ == '__main__':
