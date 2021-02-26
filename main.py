@@ -132,27 +132,27 @@ def click_if_flags_are_greater_than_spot_num(x, y, grid):
         set_grid_cell(x, y, grid, COMPLETED)
         return True
     elif spot_number == flagged_adj_count + 1 and len(unclicked_adjacents) == 2:
-        print("2 reference case first parameter met for cell: " + str([x, y]))
-        print("numbered_adjacents: " + str(numbered_adjacents))
+        #print("2 reference case first parameter met for cell: " + str([x, y]))
+        #print("numbered_adjacents: " + str(numbered_adjacents))
         for numbered_adj_cell in numbered_adjacents:
             adj_flagged_adj_count, adj_unclicked_adjacents, adj_numbered_adjacents \
                 = get_unclicked_adj_and_flagged_adj_count(grid, numbered_adj_cell[0], numbered_adj_cell[1])
             if 1 == get_grid_cell(numbered_adj_cell[0], numbered_adj_cell[1], grid) - adj_flagged_adj_count:
-                print("checking for numbered_adj_cell: " + str(numbered_adj_cell))
+                #print("checking for numbered_adj_cell: " + str(numbered_adj_cell))
                 if len(adj_unclicked_adjacents) == 3:
                     differences = []
-                    print("unclicked_adjacents: " + str(unclicked_adjacents))
-                    print("adj_unclicked_adjacents: " + str(adj_unclicked_adjacents))
+                    #print("unclicked_adjacents: " + str(unclicked_adjacents))
+                    #print("adj_unclicked_adjacents: " + str(adj_unclicked_adjacents))
                     for a_list in adj_unclicked_adjacents:
                         if a_list not in unclicked_adjacents:
                             differences.append(a_list)
-                    print("differences: " + str(differences))
+                    #print("differences: " + str(differences))
                     if len(differences) == 1:
-                        print("Left clicking difference")
+                        print("Left clicking difference: " + str(differences))
                         for cell in differences:
                             left_click_cell(cell)
                 elif len(unclicked_adjacents) == 2:
-                    print("Checking t bone scenario")
+                    #print("Checking t bone scenario")
                     go_ahead = True
                     for a_list in unclicked_adjacents:
                         if a_list not in adj_unclicked_adjacents:
@@ -168,14 +168,14 @@ def click_if_flags_are_greater_than_spot_num(x, y, grid):
             elif 2 == get_grid_cell(numbered_adj_cell[0], numbered_adj_cell[1], grid) - adj_flagged_adj_count:
                 if len(adj_unclicked_adjacents) == 3:
                     differences = []
-                    print("unclicked_adjacents: " + str(unclicked_adjacents))
-                    print("adj_unclicked_adjacents: " + str(adj_unclicked_adjacents))
+                    #print("unclicked_adjacents: " + str(unclicked_adjacents))
+                    #print("adj_unclicked_adjacents: " + str(adj_unclicked_adjacents))
                     for a_list in adj_unclicked_adjacents:
                         if a_list not in unclicked_adjacents:
                             differences.append(a_list)
-                    print("differences: " + str(differences))
+                    #print("differences: " + str(differences))
                     if len(differences) == 1:
-                        print("Right clicking difference")
+                        print("Right clicking difference: " + str(differences))
                         for cell in differences:
                             right_click_cell(cell)
     else:
@@ -345,11 +345,17 @@ def open_minesweeper_webpage():
             print("Instantiated grid of size: " + str((len(grid[0]), len(grid))))
             read_cell_and_adj_cells(starting_click, grid)
             read_all_cells = False
+            tries = 0
             while not game_over:
                 grid = read_cells(grid, read_all_cells=read_all_cells)
                 read_all_cells = False
                 if not cycle_through_number_cells(grid):
-                    guess(grid)
+                    print("Failed to find moves, reading all cells just to be sure")
+                    tries = tries + 1
+                    read_all_cells = True
+                    if tries > 2:
+                        guess(grid)
+                        tries = 0
                     #read_all_cells = True
                 if browser.find_by_id("face")["class"] == "facewin":
                     print("Game won")
