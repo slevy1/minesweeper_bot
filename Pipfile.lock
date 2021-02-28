@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "6aef73b77890681892d146d2cfa25d36f445878a6ab1cc5963094e035556bf1b"
+            "sha256": "709a6fdbb143bc6e929592e70e163eff30e6340683269368468c5500e564fe5c"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,6 +16,42 @@
         ]
     },
     "default": {
+        "cachetools": {
+            "hashes": [
+                "sha256:1d9d5f567be80f7c07d765e21b814326d78c61eb0c3a637dffc0e5d1796cb2e2",
+                "sha256:f469e29e7aa4cff64d8de4aad95ce76de8ea1125a16c68e0d93f65c3c3dc92e9"
+            ],
+            "markers": "python_version ~= '3.5'",
+            "version": "==4.2.1"
+        },
+        "future": {
+            "hashes": [
+                "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"
+            ],
+            "markers": "python_version >= '2.6' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "version": "==0.18.2"
+        },
+        "pefile": {
+            "hashes": [
+                "sha256:a5d6e8305c6b210849b47a6174ddf9c452b2888340b8177874b862ba6c207645"
+            ],
+            "version": "==2019.4.18"
+        },
+        "py2exe": {
+            "hashes": [
+                "sha256:4fe9871db013565b9e7aa52644d11495769047f35a436a28d88c51347ca2679d",
+                "sha256:8bc13bd5e219913454fdb6094ef564315bb2eab3d4f4199b132467e06430c7f6",
+                "sha256:9c05a83e87544c8b10561a5ff328743826528eea4b5be2394f9b1d31916b7b26",
+                "sha256:d16f41d42e879358419568f841adede0614ddb7bf705b600a39c228beacef323",
+                "sha256:de056fb4b8f0fe6674091a58c78628a34f24fe4fa0af3b02e2ba4e74320a4f95",
+                "sha256:e041da051fa98a130702ad68ffc36160f7a1413001e07abafe0156ddac95ffc6",
+                "sha256:e200f4b65f0595e0a2116450fcf891500e557700a83997d64cb7645e07dca013",
+                "sha256:e5dc26fd1cf9d6c8f0150b633f5ed6c906a62ddaf3d8e3b7068b34249cfd0779",
+                "sha256:fac69943e20f5d2c41546842255070a8a70c255978dba40e81d4bfcf346bd7fc"
+            ],
+            "index": "pypi",
+            "version": "==0.10.2.1"
+        },
         "selenium": {
             "hashes": [
                 "sha256:2d7131d7bc5a5b99a2d9b04aaf2612c411b03b8ca1b1ee8d3de5845a9be2cb3c",

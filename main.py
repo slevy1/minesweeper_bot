@@ -6,7 +6,8 @@ from selenium.webdriver.remote.errorhandler import UnexpectedAlertPresentExcepti
 from typing import List, Any, Tuple
 from operator import attrgetter
 from datetime import datetime
-
+import os
+from pathlib import Path
 
 UNCLICKED = "UNCLICKED"
 FLAGGED = "FLAGGED"
@@ -29,7 +30,11 @@ cell_class_dict = {
 }
 
 browser = Browser('firefox')
-
+current_dir = str(Path(".").resolve())
+print(os.environ["path"])
+if current_dir not in os.environ["path"]:
+    os.environ["path"] = os.environ["path"] + str(Path(".").resolve()) + ";"
+print(os.environ["path"])
 
 def json_default(value):
     if isinstance(value, datetime):
