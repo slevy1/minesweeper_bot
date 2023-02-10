@@ -1,3 +1,4 @@
+import pprint
 import random
 from splinter import Browser
 import time
@@ -9,11 +10,11 @@ from datetime import datetime
 import os
 from pathlib import Path
 
-UNCLICKED = "UNCLICKED"
-FLAGGED = "FLAGGED"
-BOMB_DEATH = "BOMB_DEATH"
-BOMB_REVEALED = "BOMB_REVEALED"
-COMPLETED = "COMPLETED"
+UNCLICKED = "U"
+FLAGGED = "F"
+BOMB_DEATH = "BD"
+BOMB_REVEALED = "BR"
+COMPLETED = "C"
 large_size = (29, 15)
 med_size = (15, 15)
 small_size = (8, 8)
@@ -93,7 +94,20 @@ def read_cells(grid, read_all_cells=False):
                         set_grid_cell(x, y, grid, read_cell([x, y]))
                 else:
                     set_grid_cell(x, y, grid, read_cell([x, y]))
+    print_grid(grid)
     return grid
+
+
+def print_grid(grid):
+    print('\n')
+    for grid_row in grid:
+        join = "|".join(map(str, grid_row))
+        join = join.replace(COMPLETED, "\033[0;32m" + COMPLETED + "\033[00m")
+        join = join.replace(FLAGGED, "\033[0;31m" + FLAGGED + "\033[00m")
+        join = join.replace(UNCLICKED, "\033[0;37m" + UNCLICKED + "\033[00m")
+        join = join.replace('|', "\033[0;30m" + '|' + "\033[00m")
+        print(join)
+    print('\n')
 
 
 def read_cell_and_adj_cells(cell: Tuple[int, int], grid):
