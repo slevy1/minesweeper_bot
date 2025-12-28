@@ -31,11 +31,6 @@ cell_class_dict = {
 }
 
 browser = Browser('firefox')
-current_dir = str(Path(".").resolve())
-print(os.environ["path"])
-if current_dir not in os.environ["path"]:
-    os.environ["path"] = os.environ["path"] + str(Path(".").resolve()) + ";"
-print(os.environ["path"])
 
 def json_default(value):
     if isinstance(value, datetime):
